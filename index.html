@@ -95,7 +95,7 @@
 .mock-result-cat-score.warn{color:var(--warn)}
 .mock-result-cat-score.bad{color:var(--bad)}
 
-.theme-toggle{position:fixed;top:64px;right:12px;z-index:1000;background:var(--bgs);border:.5px solid var(--bd);border-radius:var(--r20);padding:6px 10px;cursor:pointer;font-size:16px;line-height:1;box-shadow:var(--shadow);transition:all .15s;color:var(--tp)}
+.theme-toggle{position:fixed;top:12px;right:12px;z-index:1000;background:var(--bgs);border:.5px solid var(--bd);border-radius:var(--r20);padding:6px 10px;cursor:pointer;font-size:16px;line-height:1;box-shadow:var(--shadow);transition:all .15s;color:var(--tp)}
 .theme-toggle:hover{background:var(--bgd);box-shadow:var(--shadow-lg)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bgd);color:var(--tp);min-height:100vh;line-height:1.55}
@@ -491,7 +491,7 @@ p{font-size:14px;color:var(--ts);line-height:1.6}
 .calc-fab-label{position:absolute;top:calc(100% + 6px);right:0;background:var(--tp);color:var(--bg);font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;transition:opacity .15s;pointer-events:none}
 #calc-fab:hover .calc-fab-label{opacity:1}
 .calc-panel{position:fixed;top:calc(1rem + 52px);right:1rem;z-index:501;width:min(270px,calc(100vw - 2rem));background:var(--bg);border:.5px solid var(--bd);border-radius:var(--r16);box-shadow:var(--shadow-lg);overflow:hidden;display:none}
-.calc-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--acc-l);border-bottom:.5px solid var(--acc-m)}
+.calc-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--acc-l);border-bottom:.5px solid var(--acc-m);cursor:grab;user-select:none}
 .calc-header-title{font-size:14px;font-weight:500;color:var(--acc)}
 .calc-close{background:none;border:none;cursor:pointer;color:var(--ts);font-size:18px;line-height:1;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center}
 .calc-display{padding:.75rem 1rem;background:var(--bgs);border-bottom:.5px solid var(--bd);min-height:64px}
@@ -2273,6 +2273,78 @@ function cycleTheme(){
   localStorage.setItem(SK_THEME,next);applyTheme(next);
 }
 function initTheme(){applyTheme(localStorage.getItem(SK_THEME)||'system');}
+// ── CALC DRAG ────────────────────────────────────────────────────
+(function(){
+  let dragging=false, dx=0, dy=0;
+  function getPanel(){return document.getElementById('calc-panel');}
+
+  function startDrag(cx,cy){
+    const p=getPanel();if(!p)return;
+    const r=p.getBoundingClientRect();
+    // Anchor panel at current position using left/top instead of right
+    p.style.right='auto';
+    p.style.left=r.left+'px';
+    p.style.top=r.top+'px';
+    dx=cx-r.left;
+    dy=cy-r.top;
+    dragging=true;
+    document.body.style.userSelect='none';
+  }
+
+  function moveDrag(cx,cy){
+    if(!dragging)return;
+    const p=getPanel();if(!p)return;
+    const maxX=window.innerWidth-p.offsetWidth;
+    const maxY=window.innerHeight-p.offsetHeight;
+    p.style.left=Math.max(0,Math.min(cx-dx,maxX))+'px';
+    p.style.top=Math.max(0,Math.min(cy-dy,maxY))+'px';
+  }
+
+  function endDrag(){
+    dragging=false;
+    document.body.style.userSelect='';
+    const p=getPanel();if(p)p.style.cursor='';
+  }
+
+  // Mouse
+  document.addEventListener('mousedown',e=>{
+    const h=e.target.closest('.calc-header');
+    if(!h)return;
+    startDrag(e.clientX,e.clientY);
+    h.style.cursor='grabbing';
+  });
+  document.addEventListener('mousemove',e=>{if(dragging)moveDrag(e.clientX,e.clientY);});
+  document.addEventListener('mouseup',endDrag);
+
+  // Touch
+  document.addEventListener('touchstart',e=>{
+    const h=e.target.closest('.calc-header');
+    if(!h)return;
+    const t=e.touches[0];
+    startDrag(t.clientX,t.clientY);
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!dragging)return;
+    e.preventDefault();
+    const t=e.touches[0];
+    moveDrag(t.clientX,t.clientY);
+  },{passive:false});
+  document.addEventListener('touchend',endDrag);
+
+  // Reset position when calc is reopened (so it goes back to default corner)
+  const origToggle=window.toggleCalc;
+  window.toggleCalc=function(){
+    origToggle&&origToggle();
+    const p=getPanel();if(!p)return;
+    // Only reset to default if it's being opened (display going to block)
+    if(p.style.display==='block'&&!p.dataset.dragged){
+      p.style.left='';
+      p.style.top='calc(1rem + 52px)';
+      p.style.right='1rem';
+    }
+  };
+})();
+
 loadBank();
 
 // ECG overlay keyboard + swipe dismiss
