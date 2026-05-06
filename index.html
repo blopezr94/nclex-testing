@@ -260,6 +260,9 @@ p{font-size:14px;color:var(--ts);line-height:1.6}
 .nav-summary-text{font-size:12px;color:var(--ts);white-space:nowrap;font-family:'DM Mono',monospace}
 .nav-summary-badge{font-size:11px;padding:2px 7px;border-radius:10px;white-space:nowrap}
 .nav-summary-toggle{font-size:11px;color:var(--tl);flex-shrink:0;transition:transform .2s}
+.nav-calc-btn{width:32px;height:32px;border-radius:var(--r8);background:var(--acc);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.nav-calc-btn:hover{background:var(--acc-d)}
+.nav-calc-btn svg{width:16px;height:16px}
 .nav-summary-toggle.open{transform:rotate(180deg)}
 .nav-dots-panel{display:none;padding:10px 12px;background:var(--bgs);border:.5px solid var(--bd);border-top:none;border-radius:0 0 var(--r8) var(--r8);margin-top:-1px;overflow:hidden}
 .nav-dots-panel.open{display:block}
@@ -482,7 +485,7 @@ p{font-size:14px;color:var(--ts);line-height:1.6}
 
 
 /* Calculator */
-#calc-fab{position:fixed;top:1rem;right:1rem;z-index:500;display:none}
+#calc-fab{position:fixed;top:1rem;right:1rem;z-index:500;display:none!important}
 .calc-fab-btn{width:44px;height:44px;border-radius:var(--r8);background:var(--acc);color:#fff;border:none;cursor:pointer;font-size:18px;box-shadow:var(--shadow-lg);display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit}
 .calc-fab-btn:hover{background:var(--acc-d)}
 .calc-fab-label{position:absolute;top:calc(100% + 6px);right:0;background:var(--tp);color:var(--bg);font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;transition:opacity .15s;pointer-events:none}
@@ -926,7 +929,6 @@ function resumeExam(){
   document.getElementById('start-screen').style.display='none';
   document.getElementById('exam-screen').style.display='block';
   document.getElementById('results-screen').style.display='none';
-  document.getElementById('calc-fab').style.display='block';
   if(examMode==='test'&&!examEnded&&timerLeft>0)startTimer();
   renderQ();
 }
@@ -1276,7 +1278,6 @@ function startExam(){
   document.getElementById('start-screen').style.display='none';
   document.getElementById('exam-screen').style.display='block';
   document.getElementById('results-screen').style.display='none';
-  document.getElementById('calc-fab').style.display='block';
   if(examMode==='test')startTimer();renderQ();
 }
 
@@ -1373,7 +1374,24 @@ function renderQ(){
             <div class="nav-summary-prog"><div class="nav-summary-prog-fill" style="width:${pct}%;background:${progColor}"></div></div>
             <span class="nav-summary-text">${nAnswered} answered</span>${badges}
           </div>
-          <div style="display:flex;align-items:center;gap:6px"><span id="exam-timer-display" class="exam-timer" style="display:none"></span><span class="nav-summary-toggle">▼</span></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span id="exam-timer-display" class="exam-timer" style="display:none"></span>
+            <button class="nav-calc-btn" onclick="event.stopPropagation();if(typeof toggleCalc==='function')toggleCalc()" title="Calculator">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="2" width="16" height="20" rx="2"/>
+                <line x1="8" y1="6" x2="16" y2="6"/>
+                <line x1="8" y1="10" x2="8" y2="10"/>
+                <line x1="12" y1="10" x2="12" y2="10"/>
+                <line x1="16" y1="10" x2="16" y2="10"/>
+                <line x1="8" y1="14" x2="8" y2="14"/>
+                <line x1="12" y1="14" x2="12" y2="14"/>
+                <line x1="16" y1="14" x2="16" y2="14"/>
+                <line x1="8" y1="18" x2="12" y2="18"/>
+                <line x1="16" y1="18" x2="16" y2="18"/>
+              </svg>
+            </button>
+            <span class="nav-summary-toggle">▼</span>
+          </div>
         </div>
         <div class="nav-dots-panel" id="nav-dots-panel">
           <div class="nav-dots">${dots}</div>${legend}
@@ -1911,7 +1929,6 @@ function retryIncorrect(){
   try{localStorage.removeItem(SK);}catch(e){}
   hideAll();
   document.getElementById('exam-screen').style.display='block';
-  document.getElementById('calc-fab').style.display='block';
   renderQ();
 }
 
@@ -2110,8 +2127,6 @@ function startMockExam(){
   document.getElementById('start-screen').style.display='none';
   document.getElementById('exam-screen').style.display='block';
   document.getElementById('results-screen').style.display='none';
-  const fab=document.getElementById('calc-fab');if(fab)fab.style.display='block';
-
   saveSettings();
   renderQ();
 }
@@ -2218,7 +2233,6 @@ function reviewMockExam(){
     const el=document.getElementById(id);if(el)el.style.display='none';
   });
   document.getElementById('exam-screen').style.display='block';
-  const fab=document.getElementById('calc-fab');if(fab)fab.style.display='block';
   renderQ();
 }
 
