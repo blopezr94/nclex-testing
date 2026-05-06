@@ -2055,55 +2055,64 @@ function closeMockModal(){
 }
 
 function startMockExam(){
+  const examNum = pendingMockExam; // read BEFORE closeMockModal nulls it
   closeMockModal();
-  const examNum = pendingMockExam;
   if(!examNum) return;
 
-  // Clear any existing filters — mock exam is independent
-  selChapterKeys.clear();
-  selTopics.clear();
-  selFinalCategories.clear();
+  // Set active exam
   activeMockExam = examNum;
 
+  // Build ordered question list
   const examIds = MOCK_EXAMS[String(examNum)];
   const examQs = BANK.filter(q=>examIds.includes(q.id));
-
-  // Sort by the exam order
   const ordered = examIds.map(id=>examQs.find(q=>q.id===id)).filter(Boolean);
 
-  // Launch exam mode directly
+  // Initialize all exam state — mirrors startExam() exactly
   activeQs = ordered;
-  answers = {};
-  guessed = {};
   curQ = 0;
-  examMode = 'test';
-  isTutor = false;
+  answers = {};
+  selections = {};
+  guessed = {};
+  elim = {};
+  highlights = {};
+  optOrders = {};
   examEnded = false;
+  hlMode = false;
+  examMode = 'test';
+  // Set timer vars so renderQ timer bar renders correctly
+  timerTotal = MOCK_DURATION;
+  timerLeft = MOCK_DURATION;
+
+  // Start mock countdown timer (separate from exam timer bar)
   mockExamTimer = MOCK_DURATION;
-
-  // Start timer
   if(mockTimerInterval) clearInterval(mockTimerInterval);
-  const timerEl = document.getElementById('exam-timer-display');
-  if(timerEl) timerEl.style.display = 'inline-flex';
-
   mockTimerInterval = setInterval(()=>{
     mockExamTimer--;
+    timerLeft = mockExamTimer; // keep in sync so timer bar reflects correctly
     updateTimerDisplay();
+    updateTimerEl();
     if(mockExamTimer <= 0){
       clearInterval(mockTimerInterval);
       mockTimerInterval = null;
-      endMockExam(true); // time's up
+      endMockExam(true);
     }
   }, 1000);
 
-  saveSettings();
-  refreshMockSection();
-  buildClassSections();
-  // Show exam screen
-  ['load-screen','start-screen','results-screen'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.style.display='none';
-  });
+  // Show timer display in nav
+  const timerEl = document.getElementById('exam-timer-display');
+  if(timerEl) timerEl.style.display = 'inline-flex';
+  updateTimerDisplay();
+
+  // Clear saved session
+  try{localStorage.removeItem(SK);}catch(e){}
+
+  // Show exam screen — mirror startExam() exactly
+  document.getElementById('start-screen').style.display='none';
   document.getElementById('exam-screen').style.display='block';
+  document.getElementById('results-screen').style.display='none';
+  const fab=document.getElementById('calc-fab');if(fab)fab.style.display='block';
+
+  saveSettings();
   renderQ();
 }
 
@@ -2146,7 +2155,9 @@ function endMockExam(timeUp=false){
   activeQs.forEach(q=>{
     if(answers[q.id]!==undefined){
       const sc = scoreQ(q, answers[q.id]);
-      updateQStatus(q.id, sc.detail==='full', sc);
+      updateQStatus(q.id, sc.detail); // sc.detail is 'full'|'partial'|'zero'
+    } else {
+      updateQStatus(q.id, 'unanswered');
     }
   });
 
@@ -2175,8 +2186,14 @@ function showMockResults(correct, total, breakdown, timeUp){
 
   const timeUpBanner = timeUp ? `<div style="background:var(--warn-bg);border:.5px solid var(--warn-b);border-radius:var(--r8);padding:8px 12px;margin-bottom:1rem;font-size:13px;color:var(--warn);font-weight:600">⏰ Time's up — unanswered questions marked incorrect</div>` : '';
 
-  document.getElementById('exam-screen').innerHTML = `
-    <div style="max-width:600px;margin:0 auto;padding:1rem">
+  // Use results-screen to show mock results (keeps exam-screen clean for review)
+  ['load-screen','start-screen','exam-screen'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  const rs = document.getElementById('results-screen');
+  rs.style.display='block';
+  rs.innerHTML = `
+    <div style="max-width:600px;margin:2rem auto;padding:1rem">
       ${timeUpBanner}
       <div style="text-align:center;margin-bottom:1.5rem">
         <div style="font-size:13px;color:var(--ts);margin-bottom:.3rem">Mock Exam ${activeMockExam} · Attempt ${attempts}</div>
@@ -2190,20 +2207,18 @@ function showMockResults(correct, total, breakdown, timeUp){
         <button onclick="exitMockExam()" style="flex:1;padding:12px;background:var(--bgs);color:var(--tp);border:.5px solid var(--bd);border-radius:var(--r8);font-family:inherit;font-size:14px;cursor:pointer">Back to Setup</button>
       </div>
     </div>`;
-  ['load-screen','start-screen','results-screen'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.style.display='none';
-  });
-  document.getElementById('exam-screen').style.display='block';
 }
 
 function reviewMockExam(){
   examEnded = true;
-  isTutor = false;
+  examMode = 'test';
   curQ = 0;
+  // Hide all other screens before showing exam-screen
   ['load-screen','start-screen','results-screen'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.style.display='none';
   });
   document.getElementById('exam-screen').style.display='block';
+  const fab=document.getElementById('calc-fab');if(fab)fab.style.display='block';
   renderQ();
 }
 
