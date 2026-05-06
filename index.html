@@ -2251,6 +2251,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeEcgZoom();clos
 (()=>{let sy=0;document.getElementById('ecg-overlay').addEventListener('touchstart',e=>{sy=e.touches[0].clientY;},{passive:true});document.getElementById('ecg-overlay').addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-sy>60)closeEcgZoom();},{passive:true});})();
 
 
+</script>
+
 <!-- Mock Exam Modal -->
 <div class="mock-modal-overlay" id="mock-modal-overlay" onclick="handleMockOverlayClick(event)">
   <div class="mock-modal" id="mock-modal">
@@ -2272,6 +2274,5 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeEcgZoom();clos
   </div>
 </div>
 
-</script>
 </body>
 </html>
