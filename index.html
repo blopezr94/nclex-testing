@@ -798,6 +798,7 @@ function loadSettings(){
   }catch(e){}
 }
 function saveSession(){
+  if(activeMockExam) return; // don't overwrite regular session slot during mock exam
   try{localStorage.setItem(SK,JSON.stringify({ids:activeQs.map(q=>q.id),curQ,answers,selections,guessed,elim,highlights,optOrders,mode:examMode,ended:examEnded,timerLeft,timerTotal}));}catch(e){}
 }
 function loadSession(){
@@ -1287,7 +1288,21 @@ function startExam(){
 function startTimer(){clearInterval(timerInterval);timerInterval=setInterval(()=>{timerLeft--;saveSession();updateTimerEl();if(timerLeft<=0){clearInterval(timerInterval);finalizeTest(true);}},1000);}
 function stopTimer(){clearInterval(timerInterval);}
 function fmt(s){const m=Math.floor(s/60),sec=s%60;return`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;}
-function updateTimerEl(){const el=document.getElementById('timer-digits'),bar=document.getElementById('timer-bar');if(!el||!bar)return;el.textContent=fmt(timerLeft);const pct=timerLeft/timerTotal;bar.className='timer-wrap'+(pct<=0.1?' danger':pct<=0.25?' warn':'');}
+function updateTimerEl(){
+  const el=document.getElementById('timer-digits'),bar=document.getElementById('timer-bar');
+  if(el) el.textContent=fmt(timerLeft);
+  if(bar){const pct=timerLeft/timerTotal;bar.className='timer-wrap'+(pct<=0.1?' danger':pct<=0.25?' warn':'');}
+  // Also update nav timer display for regular test mode
+  if(!activeMockExam&&examMode==='test'&&!examEnded){
+    const navEl=document.getElementById('exam-timer-display');
+    if(navEl){
+      navEl.style.display='inline-flex';
+      const mins=Math.floor(timerLeft/60),secs=timerLeft%60;
+      navEl.textContent=`⏱ ${mins}:${secs.toString().padStart(2,'0')}`;
+      navEl.className='exam-timer'+(timerLeft<300?' warn':'')+(timerLeft<60?' crit':'');
+    }
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // HIGHLIGHT HELPERS
@@ -1301,7 +1316,7 @@ function applyHighlights(text,qid,zone){
   let result=text;
   sorted.forEach(({start,end,phrase})=>{
     if(start<0||end>result.length||start>=end)return;
-    result=result.slice(0,start)+'<mark>'+result.slice(start,end)+'</mark>'+result.slice(end);
+    result=result.slice(0,start)+`<mark onclick="handleMarkClick(event,${qid},'${zone}',${start},${end})" style="cursor:pointer" title="Click to remove highlight">` +result.slice(start,end)+'</mark>'+result.slice(end);
   });
   return result;
 }
@@ -1311,16 +1326,11 @@ function handleHighlight(e,qid,zone){
   if(!sel||sel.isCollapsed)return;
   const phrase=sel.toString();
   if(!phrase||phrase.trim().length<1)return;
-  // Get offset within the text node's plain text
-  // We work relative to the element's textContent to get a stable offset
   const range=sel.getRangeAt(0);
   const container=range.commonAncestorContainer;
-  // Find the stem/opt-text element that contains this selection
   const targetEl=container.nodeType===3?container.parentElement:container;
   const rootEl=targetEl.closest('.stem,.opt-text');
   if(!rootEl){sel.removeAllRanges();return;}
-  // Calculate start offset relative to rootEl's full text
-  const fullText=rootEl.textContent;
   const preRange=document.createRange();
   preRange.setStart(rootEl,0);
   preRange.setEnd(range.startContainer,range.startOffset);
@@ -1328,9 +1338,27 @@ function handleHighlight(e,qid,zone){
   const end=start+phrase.length;
   if(!highlights[qid])highlights[qid]={};
   if(!highlights[qid][zone])highlights[qid][zone]=[];
-  // Store as offset object
-  highlights[qid][zone].push({start,end,phrase:phrase.trim()});
+  // Check if this overlaps an existing highlight — if so, remove it instead
+  const existing=highlights[qid][zone];
+  const overlapIdx=existing.findIndex(h=>h.start<end&&h.end>start);
+  if(overlapIdx>=0){
+    highlights[qid][zone].splice(overlapIdx,1);
+    if(!highlights[qid][zone].length)delete highlights[qid][zone];
+    if(!Object.keys(highlights[qid]||{}).length)delete highlights[qid];
+  } else {
+    highlights[qid][zone].push({start,end,phrase:phrase.trim()});
+  }
   sel.removeAllRanges();
+  saveSession();renderQ();
+}
+function handleMarkClick(e,qid,zone,start,end){
+  // Click on <mark> to remove that highlight
+  if(!hlMode)return;
+  e.stopPropagation();
+  if(!highlights[qid]||!highlights[qid][zone])return;
+  highlights[qid][zone]=highlights[qid][zone].filter(h=>!(h.start===start&&h.end===end));
+  if(!highlights[qid][zone].length)delete highlights[qid][zone];
+  if(!Object.keys(highlights[qid]||{}).length)delete highlights[qid];
   saveSession();renderQ();
 }
 function clearHighlights(qid){delete highlights[qid];saveSession();renderQ();}
@@ -1425,8 +1453,8 @@ function buildQ(q,showFeedback){
         </div>`:''}
       </div>
       <div class="action-btns">
-        ${!locked?`<button class="hl-btn ${hlMode?'active':''}" onclick="toggleHlMode()" title="Highlight mode">🖊 Highlight</button>${hasHl?`<button class="hl-btn" onclick="clearHighlights(${q.id})" title="Clear all highlights">✕ Clear</button>`:''}`:''}
-        <button class="icon-btn ${isGuessed?'guess-active':''}" onclick="toggleGuess(${q.id})">? ${isGuessed?'Guessing':'Mark as guessed'}</button>
+        ${!locked?`<button class="hl-btn ${hlMode?'active':''}" onclick="toggleHlMode()" title="${hlMode?'Highlight ON — select text to highlight':'Highlight mode'}">🖊</button>${hasHl?`<button class="hl-btn" onclick="clearHighlights(${q.id})" title="Clear all highlights">✕</button>`:''}`:''}
+        <button class="icon-btn ${isGuessed?'guess-active':''}" onclick="toggleGuess(${q.id})"" title="${isGuessed?'Remove guess mark':'Mark as guessed'}">?</button>
       </div>
     </div>`;
 
@@ -1753,9 +1781,16 @@ function optClick(e,qid,idx,type){
 function btToggle(qid,idx,field,max){if(examMode==='tutor'&&answers[qid]!==undefined)return;const store=examMode==='tutor'?selections:answers;if(!store[qid])store[qid]={actions:[],condition:null,monitor:[]};const arr=store[qid][field]||[];if(arr.includes(idx))store[qid][field]=arr.filter(x=>x!==idx);else if(arr.length<max)store[qid][field]=[...arr,idx];saveSession();renderQ();}
 function btSet(qid,idx,field){if(examMode==='tutor'&&answers[qid]!==undefined)return;const store=examMode==='tutor'?selections:answers;if(!store[qid])store[qid]={actions:[],condition:null,monitor:[]};store[qid][field]=idx;saveSession();renderQ();}
 function mxSel(qid,row,col){if(examMode==='tutor'&&answers[qid]!==undefined)return;const store=examMode==='tutor'?selections:answers;if(!store[qid])store[qid]={};store[qid][row]=col;saveSession();renderQ();}
-function fiSet(qid,val){if(examMode==='tutor'&&answers[qid]!==undefined)return;if(examMode==='tutor'){selections[qid]=val;}else{answers[qid]=val;}saveSession();
-  // Re-render to update next button state in test mode
-  if(examMode==='test'){const q=activeQs[curQ];const btn=document.querySelector('.btn-p[disabled]');if(btn)renderQ();}
+function fiSet(qid,val){
+  if(examMode==='tutor'&&answers[qid]!==undefined)return;
+  if(examMode==='tutor'){selections[qid]=val;}else{answers[qid]=val;}
+  saveSession();
+  // Update Next button state without re-rendering (preserves input focus)
+  const nextBtn=document.getElementById('next-btn');
+  if(nextBtn&&examMode==='test'){
+    const q=activeQs[curQ];
+    nextBtn.disabled=!hasAnswer(q,answers[q.id]);
+  }
 }
 
 function toggleElim(e,qid,idx){
@@ -1827,7 +1862,13 @@ function confirmEnd(){
   else{finalizeTest(false);}
 }
 
-function finalizeTest(timedOut){stopTimer();examEnded=true;saveSession();showResults();}
+function finalizeTest(timedOut){
+  stopTimer();
+  examEnded=true;
+  const navEl=document.getElementById('exam-timer-display');
+  if(navEl) navEl.style.display='none';
+  saveSession();showResults();
+}
 
 // ── RESULTS ──────────────────────────────────────────────────────
 function showResults(){
@@ -1957,6 +1998,20 @@ function toggleNavDots(el){
   const isOpen=panel.classList.toggle('open');
   if(arrow)arrow.classList.toggle('open',isOpen);
   el.style.borderRadius=isOpen?'var(--r8) var(--r8) 0 0':'var(--r8)';
+  try{sessionStorage.setItem('navDotsOpen',isOpen?'1':'0');}catch(e){}
+}
+function restoreNavDots(){
+  try{
+    const was=sessionStorage.getItem('navDotsOpen');
+    if(was==='1'){
+      const panel=document.getElementById('nav-dots-panel');
+      const arrow=document.querySelector('.nav-summary-toggle');
+      const wrap=document.querySelector('.nav-summary');
+      if(panel){panel.classList.add('open');}
+      if(arrow){arrow.classList.add('open');}
+      if(wrap){wrap.style.borderRadius='var(--r8) var(--r8) 0 0';}
+    }
+  }catch(e){}
 }
 
 // ── CALCULATOR ───────────────────────────────────────────────────
@@ -1979,7 +2034,7 @@ function closeModal(){document.getElementById('modal').style.display='none';}
 // ═══════════════════════════════════════════════════════════════
 // MOCK EXAMS
 // ═══════════════════════════════════════════════════════════════
-const MOCK_EXAMS = {"1": [102, 103, 123, 228, 243, 376, 386, 398, 440, 470, 510, 527, 530, 551, 558, 586, 600, 602, 605, 638, 667, 672, 673, 707, 713, 731, 764, 773, 775, 776, 803, 804, 806, 835, 852, 869, 878, 901, 910, 915, 917, 918, 919, 921, 935, 944, 975, 981, 986, 990], "2": [101, 106, 110, 119, 211, 225, 348, 366, 448, 453, 456, 457, 461, 467, 482, 528, 537, 567, 572, 573, 579, 611, 641, 654, 664, 683, 687, 729, 742, 774, 779, 797, 808, 834, 848, 849, 851, 870, 904, 909, 912, 943, 946, 949, 954, 956, 959, 970, 985, 992], "3": [112, 230, 246, 331, 338, 345, 365, 373, 437, 447, 454, 489, 492, 496, 521, 536, 549, 550, 576, 616, 617, 626, 634, 639, 651, 668, 675, 690, 692, 699, 720, 733, 743, 750, 757, 765, 819, 839, 846, 854, 859, 868, 911, 922, 936, 937, 945, 955, 967, 991]};
+const MOCK_EXAMS = {"1": [640, 600, 832, 796, 493, 872, 539, 363, 337, 936, 237, 991, 118, 615, 837, 668, 876, 725, 537, 592, 921, 339, 223, 990, 215, 679, 972, 957, 488, 504, 744, 453, 813, 915, 605, 712, 581, 989, 107, 839, 639, 897, 518, 982, 690, 951, 233, 550, 646, 681], "2": [963, 852, 631, 748, 564, 538, 733, 869, 576, 221, 334, 920, 956, 898, 103, 741, 541, 572, 940, 706, 789, 923, 780, 586, 858, 900, 105, 651, 708, 451, 364, 692, 816, 913, 633, 487, 846, 568, 536, 673, 707, 916, 510, 626, 627, 746, 677, 449, 670, 755], "3": [934, 696, 907, 835, 450, 358, 703, 879, 210, 922, 567, 775, 902, 914, 754, 468, 529, 531, 983, 377, 783, 992, 777, 919, 205, 694, 935, 603, 689, 458, 492, 359, 710, 232, 645, 901, 821, 430, 680, 360, 461, 521, 641, 610, 890, 684, 801, 546, 959, 743]};
 const MOCK_BLUEPRINT = {"Trauma": 7, "Neuro": 6, "Renal": 6, "DKA": 6, "Respiratory": 5, "Cardiac": 5, "Shock": 5, "Sepsis": 2, "Thyroid Storm": 2, "Organ Donation": 2, "Dosage Calculation": 2, "Pain & Sedation": 2};
 const SK_MOCK = 'nclex_mock_scores_v1';
 const MOCK_DURATION = 100 * 60; // 100 minutes in seconds
@@ -1994,9 +2049,10 @@ function loadMockScores(){
 }
 function saveMockScore(examNum, score, total, breakdown){
   const scores = loadMockScores();
-  if(!scores[examNum]) scores[examNum] = [];
-  scores[examNum].unshift({score, total, pct: Math.round(score/total*100), breakdown, date: new Date().toLocaleDateString()});
-  if(scores[examNum].length > 5) scores[examNum].pop(); // keep last 5
+  const key = String(examNum); // always use string key — JSON always stringifies keys
+  if(!scores[key]) scores[key] = [];
+  scores[key].unshift({score, total, pct: Math.round(score/total*100), breakdown, date: new Date().toLocaleDateString()});
+  if(scores[key].length > 5) scores[key].pop();
   localStorage.setItem(SK_MOCK, JSON.stringify(scores));
 }
 
@@ -2006,7 +2062,7 @@ function buildMockExamSection(){
     <div class="mock-section-title">Mock Exams</div>
     <div class="mock-btns">`;
   [1,2,3].forEach(n => {
-    const examScores = scores[n] || [];
+    const examScores = scores[String(n)] || [];
     const best = examScores.length ? Math.max(...examScores.map(s=>s.pct)) : null;
     const last = examScores.length ? examScores[0] : null;
     const scoreHtml = last
@@ -2030,7 +2086,7 @@ function refreshMockSection(){
 function openMockModal(examNum){
   pendingMockExam = examNum;
   const scores = loadMockScores();
-  const examScores = scores[examNum] || [];
+  const examScores = scores[String(examNum)] || [];
 
   document.getElementById('mock-modal-title').textContent = `Mock Exam ${examNum}`;
 
@@ -2185,7 +2241,7 @@ function endMockExam(timeUp=false){
 function showMockResults(correct, total, breakdown, timeUp){
   const pct = Math.round(correct/total*100);
   const scores = loadMockScores();
-  const examScores = scores[activeMockExam] || [];
+  const examScores = scores[String(activeMockExam)] || [];
   const best = examScores.length ? Math.max(...examScores.map(s=>s.pct)) : pct;
   const attempts = examScores.length;
 

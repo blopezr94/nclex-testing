@@ -5637,11 +5637,11 @@
     ],
     "rat": "During PAC insertion the nurse: reduces patient anxiety, maintains sterile field to prevent infection, inflates the balloon on physician request to assist flotation, and monitors cardiac rhythm (VT/VF can occur as the catheter passes through the right ventricle). Informed consent is obtained by the physician before the procedure \u2014 the nurse may witness it but not obtain it.",
     "optRationales": [
+      "Informed consent is the physician's responsibility and must be completed before the procedure begins \u2014 the nurse witnesses but does not obtain it.",
       "Providing information reduces patient anxiety and promotes cooperation \u2014 an important nursing role during procedures.",
       "Maintaining sterile technique prevents catheter-related bloodstream infection \u2014 a critical nursing responsibility.",
       "The nurse inflates the balloon when requested to assist in floating the catheter through the right heart to the pulmonary artery.",
-      "The right ventricle is highly irritable during PAC passage \u2014 continuous cardiac monitoring is essential to detect and respond to dysrhythmias.",
-      "Informed consent is the physician's responsibility and must be completed before the procedure begins \u2014 the nurse witnesses but does not obtain it."
+      "The right ventricle is highly irritable during PAC passage \u2014 continuous cardiac monitoring is essential to detect and respond to dysrhythmias."
     ],
     "chapter": "Ch. 9 \u2014 Hemodynamic Monitoring",
     "unit": "Unit 1",
