@@ -260,8 +260,8 @@ p{font-size:14px;color:var(--ts);line-height:1.6}
 .nav-summary-text{font-size:12px;color:var(--ts);white-space:nowrap;font-family:'DM Mono',monospace}
 .nav-summary-badge{font-size:11px;padding:2px 7px;border-radius:10px;white-space:nowrap}
 .nav-summary-toggle{font-size:11px;color:var(--tl);flex-shrink:0;transition:transform .2s}
-.nav-calc-btn{width:32px;height:32px;border-radius:var(--r8);background:var(--acc);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
-.nav-calc-btn:hover{background:var(--acc-d)}
+.nav-calc-btn{width:32px;height:32px;border-radius:var(--r8);background:var(--bgs);color:var(--ts);border:.5px solid var(--bd);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.nav-calc-btn:hover{background:var(--bgd);color:var(--tp);border-color:var(--bds)}
 .nav-calc-btn svg{width:16px;height:16px}
 .nav-summary-toggle.open{transform:rotate(180deg)}
 .nav-dots-panel{display:none;padding:10px 12px;background:var(--bgs);border:.5px solid var(--bd);border-top:none;border-radius:0 0 var(--r8) var(--r8);margin-top:-1px;overflow:hidden}
@@ -1404,7 +1404,7 @@ function renderQ(){
           </div>
           <div style="display:flex;align-items:center;gap:6px">
             <span id="exam-timer-display" class="exam-timer" style="display:none"></span>
-            ${(examMode!=='tutor'&&!examEnded)?`<button class="nav-calc-btn ${hlMode?'hl-active':''}" onclick="event.stopPropagation();toggleHlMode()" title="${hlMode?'Highlight ON':'Highlight mode'}" style="${hlMode?'background:var(--hl);color:var(--hl-text);border-color:var(--warn-b)':''}">🖊</button>${(highlights[activeQs[curQ].id]&&Object.values(highlights[activeQs[curQ].id]).flat().length)?`<button class="nav-calc-btn" onclick="event.stopPropagation();clearHighlights(${activeQs[curQ].id})" title="Clear highlights" style="background:var(--bgs);color:var(--ts)">✕</button>`:''}<button class="nav-calc-btn ${guessed[activeQs[curQ].id]?'guess-active':''}" onclick="event.stopPropagation();toggleGuess(${activeQs[curQ].id})" title="${guessed[activeQs[curQ].id]?'Remove guess mark':'Mark as guessed'}" style="${guessed[activeQs[curQ].id]?'background:var(--guess-bg);color:var(--guess);border-color:var(--guess-b)':''}">?</button>`:''}
+            ${(!examEnded)?`<button class="nav-calc-btn ${hlMode?'hl-active':''}" onclick="event.stopPropagation();toggleHlMode()" title="${hlMode?'Highlight ON':'Highlight mode'}" style="${hlMode?'background:var(--hl);color:var(--hl-text);border-color:var(--warn-b);font-size:15px':''}">🖊</button>${(highlights[activeQs[curQ].id]&&Object.values(highlights[activeQs[curQ].id]).flat().length)?`<button class="nav-calc-btn" onclick="event.stopPropagation();clearHighlights(${activeQs[curQ].id})" title="Clear highlights" >✕</button>`:''}<button class="nav-calc-btn ${guessed[activeQs[curQ].id]?'guess-active':''}" onclick="event.stopPropagation();toggleGuess(${activeQs[curQ].id})" title="${guessed[activeQs[curQ].id]?'Remove guess mark':'Mark as guessed'}" style="${guessed[activeQs[curQ].id]?'background:var(--guess-bg);color:var(--guess);border-color:var(--guess-b)':''}">?</button>`:''}
             <button class="nav-calc-btn" onclick="event.stopPropagation();if(typeof toggleCalc==='function')toggleCalc()" title="Calculator">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="4" y="2" width="16" height="20" rx="2"/>
