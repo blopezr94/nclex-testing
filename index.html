@@ -83,7 +83,7 @@
 .mock-cancel-btn{padding:12px 20px;background:var(--bgs);color:var(--ts);border:.5px solid var(--bd);border-radius:var(--r8);font-family:inherit;font-size:14px;cursor:pointer;transition:all .15s}
 .mock-cancel-btn:hover{background:var(--bgd)}
 /* Timer */
-.exam-timer{font-family:'DM Mono',monospace;font-size:13px;color:var(--ts);padding:4px 10px;background:var(--bgs);border-radius:var(--r20);border:.5px solid var(--bd)}
+.exam-timer{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--acc);padding:3px 9px;background:var(--acc-l);border-radius:var(--r20);border:.5px solid var(--acc-m);letter-spacing:.01em}
 .exam-timer.warn{color:var(--warn);border-color:var(--warn-b);background:var(--warn-bg)}
 .exam-timer.crit{color:var(--bad);border-color:var(--bad-b);background:var(--bad-bg);animation:pulse 1s infinite}
 /* Results category breakdown */
@@ -287,7 +287,7 @@ p{font-size:14px;color:var(--ts);line-height:1.6}
 
 /* Question card */
 .q-card{background:var(--bg);border:.5px solid var(--bd);border-radius:var(--r16);padding:1.5rem;margin-top:.75rem;box-shadow:var(--shadow)}
-.q-card.guessed{border-color:var(--guess-b)}
+.q-card.guessed{border-color:var(--guess-b);border-left:4px solid var(--guess);}
 .q-labels{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
 .q-labels.hidden{display:none}
 .ql{font-size:11px;padding:3px 9px;border-radius:var(--r20);font-weight:500;display:inline-flex;align-items:center}
@@ -1380,7 +1380,7 @@ function renderQ(){
   let h=`<div class="exam-header">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px">
       <div style="font-size:13px;color:var(--ts)">${isTutor?'📖 Tutor':'🎯 Test'}${examEnded?' · Reviewing':''}</div>
-      ${examMode==='test'&&!examEnded?`<div id="timer-bar" class="timer-wrap"><div><div class="timer-digits" id="timer-digits">${fmt(timerLeft)}</div><div class="timer-context">remaining</div></div></div>`:''}
+      ${examMode==='test'&&!examEnded?`<div id="timer-bar" style="display:none"><div class="timer-digits" id="timer-digits">${fmt(timerLeft)}</div></div>`:''}
     </div>
     <div class="nav-dots-wrap">
       ${(()=>{
@@ -1404,6 +1404,7 @@ function renderQ(){
           </div>
           <div style="display:flex;align-items:center;gap:6px">
             <span id="exam-timer-display" class="exam-timer" style="display:none"></span>
+            ${!locked?`<button class="nav-calc-btn ${hlMode?'hl-active':''}" onclick="event.stopPropagation();toggleHlMode()" title="${hlMode?'Highlight ON':'Highlight mode'}" style="${hlMode?'background:var(--hl);color:var(--hl-text);border-color:var(--warn-b)':''}">🖊</button>${hasHl?`<button class="nav-calc-btn" onclick="event.stopPropagation();clearHighlights(${q.id})" title="Clear highlights" style="background:var(--bgs);color:var(--ts)">✕</button>`:''}<button class="nav-calc-btn ${isGuessed?'guess-active':''}" onclick="event.stopPropagation();toggleGuess(${q.id})" title="${isGuessed?'Remove guess mark':'Mark as guessed'}" style="${isGuessed?'background:var(--guess-bg);color:var(--guess);border-color:var(--guess-b)':''}">?</button>`:''}
             <button class="nav-calc-btn" onclick="event.stopPropagation();if(typeof toggleCalc==='function')toggleCalc()" title="Calculator">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="4" y="2" width="16" height="20" rx="2"/>
@@ -1429,6 +1430,7 @@ function renderQ(){
   </div>`;
   h+=buildQ(q,showFeedback);
   document.getElementById('exam-screen').innerHTML=h;
+  restoreNavDots();
 }
 
 function buildQ(q,showFeedback){
@@ -1449,17 +1451,13 @@ function buildQ(q,showFeedback){
           <span class="ql ql-topic">${q.subtopic||q.topic}</span>
           <span class="ql ql-bloom">${q.bloom}</span>
           <span class="ql ql-class">${q.class}</span>
-          ${isGuessed?`<span class="ql ql-guess">? Marked as guessed</span>`:''}
         </div>`:''}
       </div>
-      <div class="action-btns">
-        ${!locked?`<button class="hl-btn ${hlMode?'active':''}" onclick="toggleHlMode()" title="${hlMode?'Highlight ON — select text to highlight':'Highlight mode'}">🖊</button>${hasHl?`<button class="hl-btn" onclick="clearHighlights(${q.id})" title="Clear all highlights">✕</button>`:''}`:''}
-        <button class="icon-btn ${isGuessed?'guess-active':''}" onclick="toggleGuess(${q.id})"" title="${isGuessed?'Remove guess mark':'Mark as guessed'}">?</button>
-      </div>
+      <div class="action-btns"></div>
     </div>`;
 
 
-  if(isGuessed&&!showFeedback){h+=`<div class="guess-panel">? Marked as guessed — will be highlighted in your results.</div>`;}
+  // guess state shown via card left border + nav toolbar button — no banner needed
 
 
 
@@ -2414,11 +2412,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeEcgZoom();clos
 <div class="mock-modal-overlay" id="mock-modal-overlay" onclick="handleMockOverlayClick(event)">
   <div class="mock-modal" id="mock-modal">
     <div class="mock-modal-title" id="mock-modal-title">Mock Exam 1</div>
-    <div class="mock-modal-sub">50 questions · 100 minutes · Blueprint-proportioned</div>
-    <div class="mock-modal-stats">
-      <div class="mock-stat"><div class="mock-stat-label">Questions</div><div class="mock-stat-val">50</div></div>
-      <div class="mock-stat"><div class="mock-stat-label">Time Limit</div><div class="mock-stat-val">100 min</div></div>
-    </div>
+    <div class="mock-modal-sub">50 questions · 100 min · Blueprint-proportioned</div>
     <div id="mock-prev-scores-container"></div>
     <div class="mock-modal-breakdown">
       <div class="mock-modal-breakdown-title">Blueprint Breakdown</div>
