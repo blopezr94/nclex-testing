@@ -1387,7 +1387,7 @@ function renderQ(){
         const nTotal=activeQs.length,nAnswered=Object.keys(answers).length,nGuessed=Object.keys(guessed).length;
         const pct=Math.round(nAnswered/nTotal*100);
         const progColor=examMode==="tutor"?"var(--tutor-m)":"var(--test-m)";
-        let badges=nGuessed>0?`<span class="nav-summary-badge" style="background:var(--guess-bg);color:var(--guess)">? ${nGuessed} guessed</span>`:"";
+        let badges=nGuessed>0?`<span class="nav-summary-badge" style="background:var(--guess-bg);color:var(--guess)">${nGuessed} guessed</span>`:"";
         const dots=activeQs.map((qq,i)=>{
           let c="dot";if(i===curQ)c+=" cur";
           else if((isTutor||examEnded)&&answers[qq.id]!==undefined){const sc=scoreQ(qq,answers[qq.id]);c+=sc.detail==="full"?" dok":sc.detail==="partial"?" dpart":" dbad";}
@@ -1400,11 +1400,11 @@ function renderQ(){
           <div class="nav-summary-left">
             <span class="nav-summary-text">Q${curQ+1}&nbsp;/&nbsp;${nTotal}</span>
             <div class="nav-summary-prog"><div class="nav-summary-prog-fill" style="width:${pct}%;background:${progColor}"></div></div>
-            <span class="nav-summary-text">${nAnswered} answered</span>${badges}
+            ${(examEnded||(examMode==='tutor'&&answers[activeQs[curQ].id]!==undefined))?`<span class="nav-summary-text">${nAnswered} answered</span>${badges}`:''}
           </div>
           <div style="display:flex;align-items:center;gap:6px">
             <span id="exam-timer-display" class="exam-timer" style="visibility:hidden;opacity:0"></span>
-            ${(!examEnded)?`<button class="nav-calc-btn ${hlMode?'hl-active':''}" onclick="event.stopPropagation();toggleHlMode()" title="${hlMode?'Highlight ON':'Highlight mode'}" style="${hlMode?'background:var(--hl);color:var(--hl-text);border-color:var(--warn-b);font-size:15px':''}">🖊</button>${(highlights[activeQs[curQ].id]&&Object.values(highlights[activeQs[curQ].id]).flat().length)?`<button class="nav-calc-btn" onclick="event.stopPropagation();clearHighlights(${activeQs[curQ].id})" title="Clear highlights" >✕</button>`:''}<button class="nav-calc-btn ${guessed[activeQs[curQ].id]?'guess-active':''}" onclick="event.stopPropagation();toggleGuess(${activeQs[curQ].id})" title="${guessed[activeQs[curQ].id]?'Remove guess mark':'Mark as guessed'}" style="${guessed[activeQs[curQ].id]?'background:var(--guess-bg);color:var(--guess);border-color:var(--guess-b)':''}">?</button>`:''}
+            ${(!examEnded)?`<button class="nav-calc-btn ${hlMode?'hl-active':''}" onclick="event.stopPropagation();toggleHlMode()" title="${hlMode?'Highlight ON':'Highlight mode'}" style="${hlMode?'background:var(--hl);color:var(--hl-text);border-color:var(--warn-b);font-size:15px':''}">🖊</button><button class="nav-calc-btn ${guessed[activeQs[curQ].id]?'guess-active':''}" onclick="event.stopPropagation();toggleGuess(${activeQs[curQ].id})" title="${guessed[activeQs[curQ].id]?'Remove guess mark':'Mark as guessed'}" style="${guessed[activeQs[curQ].id]?'background:var(--guess-bg);color:var(--guess);border-color:var(--guess-b)':''}">?</button>`:''}
             <button class="nav-calc-btn" onclick="event.stopPropagation();if(typeof toggleCalc==='function')toggleCalc()" title="Calculator">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="4" y="2" width="16" height="20" rx="2"/>
@@ -1431,6 +1431,9 @@ function renderQ(){
   h+=buildQ(q,showFeedback);
   document.getElementById('exam-screen').innerHTML=h;
   restoreNavDots();
+  // Immediately restore timer visibility — innerHTML rebuild resets it
+  if(activeMockExam && !examEnded){updateTimerDisplay();}
+  else if(examMode==='test' && !examEnded && timerLeft>0){updateTimerEl();}
 }
 
 function buildQ(q,showFeedback){
