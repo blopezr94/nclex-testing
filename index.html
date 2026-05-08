@@ -1646,9 +1646,9 @@ function buildQ(q,showFeedback){
       // Right side
       const canNext=hasAnswer(q,answers[q.id]);
       if(curQ<activeQs.length-1){
-        btnRight.push(`<button class="btn btn-p" ${canNext?'':'disabled'} onclick="${canNext?'nextQ()':''}">${canNext?'Next →':'Select an answer'}</button>`);
+        btnRight.push(`<button class="btn btn-p" id="next-btn" ${canNext?'':'disabled'} onclick="${canNext?'nextQ()':''}">${canNext?'Next →':'Select an answer'}</button>`);
       } else {
-        btnRight.push(`<button class="btn btn-p" ${canNext?'':'disabled'} onclick="${canNext?'finalizeTest(false)':''}">${canNext?'Submit exam':'Select an answer'}</button>`);
+        btnRight.push(`<button class="btn btn-p" id="next-btn" ${canNext?'':'disabled'} onclick="${canNext?'finalizeTest(false)':''}">${canNext?'Submit exam':'Select an answer'}</button>`);
       }
     } else {
       // Reviewing after test
@@ -1787,10 +1787,16 @@ function fiSet(qid,val){
   if(examMode==='tutor'){selections[qid]=val;}else{answers[qid]=val;}
   saveSession();
   // Update Next button state without re-rendering (preserves input focus)
+  // Works for both test and tutor mode, uses answers in test, selections in tutor
   const nextBtn=document.getElementById('next-btn');
-  if(nextBtn&&examMode==='test'){
+  if(nextBtn){
     const q=activeQs[curQ];
-    nextBtn.disabled=!hasAnswer(q,answers[q.id]);
+    const currentAns=examMode==='tutor'?selections[q.id]:answers[q.id];
+    nextBtn.disabled=!hasAnswer(q,currentAns);
+    if(!nextBtn.disabled){
+      nextBtn.textContent=curQ<activeQs.length-1?'Next →':(examMode==='test'?'Submit exam':'Finish & see results');
+      nextBtn.onclick=curQ<activeQs.length-1?nextQ:(examMode==='test'?()=>finalizeTest(false):checkTutorFinish);
+    }
   }
 }
 
