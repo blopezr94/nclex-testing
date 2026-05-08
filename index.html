@@ -83,7 +83,7 @@
 .mock-cancel-btn{padding:12px 20px;background:var(--bgs);color:var(--ts);border:.5px solid var(--bd);border-radius:var(--r8);font-family:inherit;font-size:14px;cursor:pointer;transition:all .15s}
 .mock-cancel-btn:hover{background:var(--bgd)}
 /* Timer */
-.exam-timer{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--acc);padding:3px 9px;background:var(--acc-l);border-radius:var(--r20);border:.5px solid var(--acc-m);letter-spacing:.01em}
+.exam-timer{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--acc);padding:3px 9px;background:var(--acc-l);border-radius:var(--r20);border:.5px solid var(--acc-m);letter-spacing:.01em;transition:opacity .15s}
 .exam-timer.warn{color:var(--warn);border-color:var(--warn-b);background:var(--warn-bg)}
 .exam-timer.crit{color:var(--bad);border-color:var(--bad-b);background:var(--bad-bg);animation:pulse 1s infinite}
 /* Results category breakdown */
@@ -1296,7 +1296,7 @@ function updateTimerEl(){
   if(!activeMockExam&&examMode==='test'&&!examEnded){
     const navEl=document.getElementById('exam-timer-display');
     if(navEl){
-      navEl.style.display='inline-flex';
+      navEl.style.visibility='visible';navEl.style.opacity='1';
       const mins=Math.floor(timerLeft/60),secs=timerLeft%60;
       navEl.textContent=`⏱ ${mins}:${secs.toString().padStart(2,'0')}`;
       navEl.className='exam-timer'+(timerLeft<300?' warn':'')+(timerLeft<60?' crit':'');
@@ -1403,7 +1403,7 @@ function renderQ(){
             <span class="nav-summary-text">${nAnswered} answered</span>${badges}
           </div>
           <div style="display:flex;align-items:center;gap:6px">
-            <span id="exam-timer-display" class="exam-timer" style="display:none"></span>
+            <span id="exam-timer-display" class="exam-timer" style="visibility:hidden;opacity:0"></span>
             ${(!examEnded)?`<button class="nav-calc-btn ${hlMode?'hl-active':''}" onclick="event.stopPropagation();toggleHlMode()" title="${hlMode?'Highlight ON':'Highlight mode'}" style="${hlMode?'background:var(--hl);color:var(--hl-text);border-color:var(--warn-b);font-size:15px':''}">🖊</button>${(highlights[activeQs[curQ].id]&&Object.values(highlights[activeQs[curQ].id]).flat().length)?`<button class="nav-calc-btn" onclick="event.stopPropagation();clearHighlights(${activeQs[curQ].id})" title="Clear highlights" >✕</button>`:''}<button class="nav-calc-btn ${guessed[activeQs[curQ].id]?'guess-active':''}" onclick="event.stopPropagation();toggleGuess(${activeQs[curQ].id})" title="${guessed[activeQs[curQ].id]?'Remove guess mark':'Mark as guessed'}" style="${guessed[activeQs[curQ].id]?'background:var(--guess-bg);color:var(--guess);border-color:var(--guess-b)':''}">?</button>`:''}
             <button class="nav-calc-btn" onclick="event.stopPropagation();if(typeof toggleCalc==='function')toggleCalc()" title="Calculator">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1840,7 +1840,7 @@ function backToSetup(){
   if(mockTimerInterval){clearInterval(mockTimerInterval);mockTimerInterval=null;}
   if(activeMockExam&&!examEnded){activeMockExam=null;mockExamTimer=null;}
   const timerEl=document.getElementById('exam-timer-display');
-  if(timerEl) timerEl.style.display='none';
+  if(timerEl) timerEl.style.visibility='hidden';timerEl.style.opacity='0';
   try{localStorage.removeItem(SK);}catch(e){}
   activeQs=[];curQ=0;answers={};selections={};guessed={};elim={};highlights={};optOrders={};examEnded=false;hlMode=false;
   hideAll();
@@ -1864,7 +1864,7 @@ function finalizeTest(timedOut){
   stopTimer();
   examEnded=true;
   const navEl=document.getElementById('exam-timer-display');
-  if(navEl) navEl.style.display='none';
+  if(navEl) navEl.style.visibility='hidden';navEl.style.opacity='0';
   saveSession();showResults();
 }
 
@@ -2170,8 +2170,6 @@ function startMockExam(){
   }, 1000);
 
   // Show timer display in nav
-  const timerEl = document.getElementById('exam-timer-display');
-  if(timerEl) timerEl.style.display = 'inline-flex';
   updateTimerDisplay();
 
   // Clear saved session
@@ -2192,12 +2190,13 @@ function updateTimerDisplay(){
   const secs = mockExamTimer % 60;
   el.textContent = `⏱ ${mins}:${secs.toString().padStart(2,'0')}`;
   el.className = 'exam-timer' + (mockExamTimer < 300 ? ' warn' : '') + (mockExamTimer < 60 ? ' crit' : '');
+  el.style.visibility='visible';el.style.opacity='1';
 }
 
 function endMockExam(timeUp=false){
   if(mockTimerInterval){ clearInterval(mockTimerInterval); mockTimerInterval=null; }
   const timerEl = document.getElementById('exam-timer-display');
-  if(timerEl) timerEl.style.display='none';
+  if(timerEl) timerEl.style.visibility='hidden';timerEl.style.opacity='0';
 
   examEnded = true;
   examMode = 'test';
@@ -2295,7 +2294,7 @@ function exitMockExam(){
   mockExamTimer = null;
   activeMockExam = null;
   const timerEl = document.getElementById('exam-timer-display');
-  if(timerEl) timerEl.style.display='none';
+  if(timerEl) timerEl.style.visibility='hidden';timerEl.style.opacity='0';
   activeQs=[]; answers={}; guessed={}; examEnded=false;
   saveSettings();
   refreshMockSection();
